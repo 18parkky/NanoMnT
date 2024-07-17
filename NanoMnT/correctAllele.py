@@ -11,7 +11,7 @@ import Levenshtein
 import pandas as pd
 import multiprocessing
 
-import nanomnt_utility  #!
+import NanoMnT.nanomnt_utility as nanomnt_utility
 
 # Correct the allele motif by motif
 def correctAllele(STR_allele_table, err_threshold=None):

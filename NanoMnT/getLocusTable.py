@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 
 sns.set_style("darkgrid", {"grid.color": ".6", "grid.linestyle": ":"})
 
-import NanoMnT.nanomnt_utility
+import NanoMnT.nanomnt_utility as nanomnt_utility
 
 dict_repeatUnit_to_prominence = {
     "A" : (0.2, 0.4),

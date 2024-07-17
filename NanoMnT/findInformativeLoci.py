@@ -15,7 +15,7 @@ import multiprocessing
 import seaborn as sns 
 import matplotlib.pyplot as plt
 
-import NanoMnT.nanomnt_utility
+import NanoMnT.nanomnt_utility as nanomnt_utility
 
 def runFindInformativeLoci( dir_normal_at, dir_normal_lt, 
                            dir_tumor_at, dir_tumor_lt, 

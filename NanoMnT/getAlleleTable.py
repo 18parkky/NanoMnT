@@ -15,7 +15,7 @@ import multiprocessing
 import seaborn as sns 
 import matplotlib.pyplot as plt
 
-import NanoMnT.nanomnt_utility
+import NanoMnT.nanomnt_utility as nanomnt_utility
 
 PILEUP_LIMIT = 5000000 # pysam's pileup's default value for max_depth is 8000
 
