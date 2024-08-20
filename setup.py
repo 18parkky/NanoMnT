@@ -13,7 +13,7 @@ setup(
         'console_scripts' : [ 'getAlleleTable = NanoMnT.getAlleleTable:main', 
                              'getLocusTable = NanoMnT.getLocusTable:main', 
                              'findInformativeLoci = NanoMnT.findInformativeLoci:main', 
-                             'filterBAMbyMAPQ = NanoMnT.filterBAMbyMAPQ:main'] 
+                             ] 
     },
     install_requires=['pysam>=0.20.0',
                       'Levenshtein>=0.21.1',     

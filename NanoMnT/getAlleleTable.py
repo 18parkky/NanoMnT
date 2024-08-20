@@ -1,7 +1,8 @@
 import gc
 import os
+import gzip
 import time
-import math 
+import math
 import glob
 import pysam
 import logging
@@ -99,37 +100,43 @@ def getFlankingSequence( pysam_fasta_obj, contig, start, end, flanking_length ):
     return (lf, rf)
 
 
-def load_SSR_table( dir_ssr_tsv, required_columns, dir_log=None ):
-    """ 
-    Determine whether the given Krait (or pytrf) file is appropriate.
-    """
-    STR_input_type = None
-    with open( dir_ssr_tsv, "r" ) as ssr_tsv:
-        for line in ssr_tsv:
-            columns = line.strip().split("\t")
-            if len( set(columns).intersection( set(required_columns) ) ) == 0:                    
-                STR_input_type = "pytrf"
-                break
-            else:
-                STR_input_type = "krait"
-                break
+# def load_SSR_table( dir_ssr_tsv, required_columns, dir_log=None ):
+#     """ 
+#     Determine whether the given Krait (or pytrf) file is appropriate.
+#     """
+#     STR_input_type = None
+#     try:
+#         ssr_tsv = open( dir_ssr_tsv, "r" )
+#     except:
+#         ssr_tsv = gzip.open( dir_ssr_tsv, "r" )
+        
+#     for line in ssr_tsv:
+#         columns = line.strip().split("\t")
+#         if len( set(columns).intersection( set(required_columns) ) ) == 0:                    
+#             STR_input_type = "pytrf"
+#             break
+#         else:
+#             STR_input_type = "krait"
+#             break
                 
-    if STR_input_type == None: # Raise error if STR_input_type wasn't determinedß
-        raise ValueError
-    if dir_log != None:
-        logging.basicConfig(filename=dir_log, level=logging.INFO)
-        logging.info( f"SSR table identified as:\t{STR_input_type}-generated" )
+#     if STR_input_type == None: # Raise error if STR_input_type wasn't determinedß
+#         raise ValueError
+#     if dir_log != None:
+#         logging.basicConfig(filename=dir_log, level=logging.INFO)
+#         logging.info( f"SSR table identified as:\t{STR_input_type}-generated" )
 
-    if STR_input_type == "pytrf":
-        STR_table = pd.read_csv(dir_ssr_tsv, sep='\t', names=required_columns) 
-    elif STR_input_type == "krait":
-        STR_table = pd.read_csv(dir_ssr_tsv, sep='\t')
+#     if STR_input_type == "pytrf":
+#         STR_table = pd.read_csv(dir_ssr_tsv, sep='\t', names=required_columns) 
+#     elif STR_input_type == "krait":
+#         STR_table = pd.read_csv(dir_ssr_tsv, sep='\t')
     
-    STR_table = STR_table.sample( frac=1, random_state=0 ).reset_index(drop=True) # shuffle STR table for even distribution of loci among chunks
-    return STR_table
+#     ssr_tsv.close()
+    
+#     STR_table = STR_table.sample( frac=1, random_state=0 ).reset_index(drop=True) # shuffle STR table for even distribution of loci among chunks
+#     return STR_table
 
 
-def realign( bamfile, region, dir_reference_genome, flanking_length, mapq_threshold, fasta_flanking_length, placeholder_length, keepFiles, PATH_temp, ):
+def realign( bamfile, region, dir_reference_genome, flanking_length, mapq_threshold, fasta_flanking_length, placeholder_length, sc, PATH_temp, ):
 
     # (1) Collect reads that align to the given STR region
     dict_reads = dict()
@@ -137,7 +144,25 @@ def realign( bamfile, region, dir_reference_genome, flanking_length, mapq_thresh
         for pileupread in pileupcolumn.pileups:
             if (pileupread.alignment.is_secondary == False and pileupread.alignment.is_supplementary == False):
                 if pileupread.alignment.query_name not in dict_reads.keys():
-                    dict_reads[pileupread.alignment.query_name] = pileupread.alignment.get_forward_sequence()
+                    
+                    if sc == True:
+                        
+                        try:
+                            CB = pileupread.alignment.get_tag("CB")
+                        except: 
+                            CB = None 
+                            
+                        try:
+                            UMI = pileupread.alignment.get_tag("UB")
+                        except: 
+                            UMI = None 
+                        
+                            
+                    else:
+                        CB  = None 
+                        UMI = None
+                        
+                    dict_reads[pileupread.alignment.query_name] = [pileupread.alignment.get_forward_sequence(), CB, UMI]
     
     # (2) Create temporary Fasta file that contains the given STR region sequence and its flankings
     STR_name = f"{region[0]}_{region[1]}x{region[2]}_{region[3]}"
@@ -148,23 +173,43 @@ def realign( bamfile, region, dir_reference_genome, flanking_length, mapq_thresh
         fasta.write(f">{region[0]}\n")
         fasta.write(f"{lf}{placeholder_sequence}{rf}\n")
     
-    # (3) Create temporary Fastq file for reads that align to this STR region
-    with open(f"{PATH_temp}/{STR_name}.reads.fasta", "w") as fastq:
+    # (3) Create temporary Fasta file for reads that align to this STR region
+    with open(f"{PATH_temp}/{STR_name}.reads.fasta", "w") as fasta:
         for readname, readinfo in dict_reads.items():
-            sequence        = readinfo
-            fastq.write(f">{readname}\n")
-            fastq.write(f"{sequence}\n")
+            sequence        = readinfo[0]
+            fasta.write(f">{readname}\n")
+            fasta.write(f"{sequence}\n")
             
-    # (4) Align using minimap2 
+    # (4) Align using minimap2
     STR_name = f"{region[0]}_{region[1]}x{region[2]}_{region[3]}"
-    command = f"minimap2 -a -A 4 -B 10 -t 1 {PATH_temp}/{STR_name}.ref.fasta {PATH_temp}/{STR_name}.reads.fasta | samtools view -Sb -F0x900 | samtools sort > {PATH_temp}/{STR_name}.sorted.bam"
+    realigned_bam_out = f"{PATH_temp}/{STR_name}.sorted.bam"
+    command = f"minimap2 -a -A 4 -B 10 -t 1 {PATH_temp}/{STR_name}.ref.fasta {PATH_temp}/{STR_name}.reads.fasta | samtools view -Sb -F0x900 | samtools sort > {realigned_bam_out}"
     subprocess.call(command, shell=True)
-    command = f"samtools index {PATH_temp}/{STR_name}.sorted.bam"
-    subprocess.call(command, shell=True)   
-    
-    if keepFiles == False:
-        os.remove(f"{PATH_temp}/{STR_name}.ref.fasta")
-        os.remove(f"{PATH_temp}/{STR_name}.reads.fasta")
+    pysam.index(realigned_bam_out)
+ 
+    # (5) If sc==True, set CB and UMI tags to realigned BAM
+    if sc == True:
+        realigned_bamfile = pysam.AlignmentFile(realigned_bam_out, "rb")
+        realigned_tagged_bam_out = f"{PATH_temp}/{STR_name}.sorted.tagged.bam"
+        realigned_tagged_bamfile = pysam.AlignmentFile(realigned_tagged_bam_out, "wb", template=realigned_bamfile)
+        for read in realigned_bamfile.fetch():
+            read_name = read.query_name
+            read.set_tag( "CB", dict_reads[read_name][1] )
+            read.set_tag( "UB", dict_reads[read_name][2] )
+            
+            realigned_tagged_bamfile.write(read)
+            
+        realigned_tagged_bamfile.close()
+
+        # Delete realigned BAM
+        os.remove( realigned_bam_out )
+        os.rename( realigned_tagged_bam_out, realigned_bam_out)
+        pysam.index(realigned_bam_out)
+
+    # Delete temporary FASTA files
+    tempFiles = glob.glob(f"{PATH_temp}/{STR_name}*.fasta")
+    for file in tempFiles:
+        os.remove( file )
         
     return  
 
@@ -191,17 +236,16 @@ def errorCorrection_multiprocess( STR_allele_table_chunk, distance, process_num,
 
     return 
 
-
-def extractSTR_multiprocess( dir_bamfile, STR_table, dir_reference_genome, flanking_length, mapq_threshold, sc, keepFiles, PATH_temp ):
+def extractSTR_multiprocess( dir_bamfile, STR_table, dir_reference_genome, flanking_length, mapq_threshold, sc, PATH_temp ):
     
     for tup in STR_table.itertuples():
         
         # (1) Realign reads using minimap2 via subprocess
-        STR_region = [ tup.sequence, tup.motif, tup.repeat, tup.start, tup.end ]
+        STR_region = [ str(tup.sequence), tup.motif, tup.repeat, tup.start, tup.end ]
         fasta_flanking_length = 20000
         bamfile = pysam.AlignmentFile(dir_bamfile, "rb")
         placeholder_length = 50
-        realign(bamfile, STR_region, dir_reference_genome, flanking_length, mapq_threshold, fasta_flanking_length, placeholder_length, keepFiles, PATH_temp )
+        realign(bamfile, STR_region, dir_reference_genome, flanking_length, mapq_threshold, fasta_flanking_length, placeholder_length, sc, PATH_temp )
         
         # (2) Get the realigned STR information of each read
         STR_name = f"{STR_region[0]}_{STR_region[1]}x{STR_region[2]}_{STR_region[3]}"
@@ -220,14 +264,24 @@ def extractSTR_multiprocess( dir_bamfile, STR_table, dir_reference_genome, flank
                 read_name = pileupread.alignment.query_name
 
                 # First iteration 
-                if bool_firstIteration == 0 and pileupcolumn.pos == fasta_flanking_length - flanking_length:
+                if bool_firstIteration == False and pileupcolumn.pos == fasta_flanking_length - flanking_length:
             
                     if sc == True:
-                        try:    dict_readname_to_STRinfo[read_name] = ["", flanking_length, flanking_length, pileupread.alignment.flag, pileupread.alignment.get_tag("CB"), pileupread.alignment.get_tag("UB")]
-                        except: dict_readname_to_STRinfo[read_name] = ["", flanking_length, flanking_length, pileupread.alignment.flag, None, None,]
+                        try:
+                            CB = pileupread.alignment.get_tag("CB")
+                        except: 
+                            CB = None 
+                            
+                        try:
+                            UMI = pileupread.alignment.get_tag("UB")
+                        except: 
+                            UMI = None 
+                    
                     else:
+                        CB = None 
+                        UMI = None 
                         
-                        dict_readname_to_STRinfo[read_name] = ["", flanking_length, flanking_length, pileupread.alignment.flag, None, None,]
+                    dict_readname_to_STRinfo[read_name] = ["", flanking_length, flanking_length, pileupread.alignment.flag, CB, UMI,]
                 
                 if read_name in dict_readname_to_STRinfo.keys():
                     if not pileupread.is_refskip:
@@ -271,15 +325,16 @@ def extractSTR_multiprocess( dir_bamfile, STR_table, dir_reference_genome, flank
             
             alleleTable_entries.append( [readname, f"{STR_region[0]}:{STR_region[3]}-{STR_region[4]}", STR_region[1], str_seq, reference_STR_allele, left_flanking_seq, right_flanking_seq, flag, CB, UMI] )
         
-        nanomnt_utility.saveWithPickle(alleleTable_entries, PATH_temp, STR_name)
+        if len(alleleTable_entries) != 0:
+            nanomnt_utility.saveWithPickle(alleleTable_entries, PATH_temp, STR_name)
 
-        if keepFiles == False:
-            os.remove(f"{PATH_temp}/{STR_name}.sorted.bam")
-            os.remove(f"{PATH_temp}/{STR_name}.sorted.bam.bai")
-    
+        # Delete realigned BAM file
+        os.remove(f"{PATH_temp}/{STR_name}.sorted.bam")
+        os.remove(f"{PATH_temp}/{STR_name}.sorted.bam.bai")
+
     return  
 
-def runGetAlleleTable( dir_bam, dir_ssr_tsv, dir_reference_genome, mapq_threshold, threads, flanking_length, sc, keepFiles, start_time, dir_log, PATH_out ):
+def runGetAlleleTable( dir_bam, dir_ssr_tsv, dir_reference_genome, mapq_threshold, threads, flanking_length, sc, start_time, dir_log, PATH_out ):
     logging.basicConfig(filename=dir_log, level=logging.INFO)
     
     bam_filename = os.path.splitext(os.path.basename(dir_bam))[0]
@@ -291,7 +346,8 @@ def runGetAlleleTable( dir_bam, dir_ssr_tsv, dir_reference_genome, mapq_threshol
         
     # (2) Prepare and chunk Krait SSR table    
     required_columns = ["sequence", "start", "end", "motif", "type", "repeat", "length"]
-    STR_table = load_SSR_table( dir_ssr_tsv, required_columns, dir_log )
+    # STR_table = load_SSR_table( dir_ssr_tsv, required_columns, dir_log )
+    STR_table = pd.read_csv(dir_ssr_tsv, sep='\t')
         
     try:
         chunk_size = math.ceil( len(STR_table) / threads )
@@ -311,7 +367,7 @@ def runGetAlleleTable( dir_bam, dir_ssr_tsv, dir_reference_genome, mapq_threshol
         nanomnt_utility.checkAndCreate(PATH_temp)
         
         p = multiprocessing.Process(target=extractSTR_multiprocess,
-                                    args=[dir_bam, STR_chunk, dir_reference_genome, flanking_length, mapq_threshold, sc, keepFiles, PATH_temp] )
+                                    args=[dir_bam, STR_chunk, dir_reference_genome, flanking_length, mapq_threshold, sc, PATH_temp] )
         p.start()
         processes.append(p)
     for process in processes:
@@ -328,8 +384,10 @@ def runGetAlleleTable( dir_bam, dir_ssr_tsv, dir_reference_genome, mapq_threshol
             cur_alleleTable_entries = nanomnt_utility.loadFromPickle(dir_pickle)
             for entry in cur_alleleTable_entries:
                 alleleTable_entries.append( entry )
-            os.remove(dir_pickle)
             
+            # Delete pickle files
+            os.remove(dir_pickle)
+        
         os.rmdir( f"{PATH_multiprocess_out}/thread_{idx}" )
 
     df_alleleTable = pd.DataFrame(alleleTable_entries, columns=["read_name", "locus", "repeat_unit", "allele", "reference_STR_allele", "left_flanking_seq", "right_flanking_seq", "flag", "CB", "UMI"])
@@ -365,22 +423,20 @@ def runGetAlleleTable( dir_bam, dir_ssr_tsv, dir_reference_genome, mapq_threshol
     logging.info(f"Writing STR allele table to disk")
     df_concat_allele_table.to_csv(f"{PATH_out}/{bam_filename}.STR_allele_table.tsv", sep='\t', index=False)
     
+
     for dir_allele_table in list_dir_allele_tables:
-        os.remove( dir_allele_table ) 
-    os.rmdir( PATH_multiprocess_out )
+        os.remove( dir_allele_table )
     
-    del df_alleleTable
-    gc.collect()
+    # list_temp_PATH = glob.glob(f"{PATH_multiprocess_out}/*")
+    # deleteAllPATHs = False
+    # for temp_PATH in list_temp_PATH:
+    #     if len(os.listdir(temp_PATH)) == 0:
+    #         os.rmdir(temp_PATH)
+    #         deleteAllPATHs = True
+    # if deleteAllPATHs == True:
+    #     os.rmdir(PATH_multiprocess_out)   
+    os.rmdir(PATH_multiprocess_out)
     
-    list_temp_PATH = glob.glob(f"{PATH_multiprocess_out}/*")
-    deleteAllPATHs = False
-    for temp_PATH in list_temp_PATH:
-        if len(os.listdir(temp_PATH)) == 0:
-            os.rmdir(temp_PATH)
-            deleteAllPATHs = True
-    if deleteAllPATHs == True:
-        os.rmdir(PATH_multiprocess_out)
-        
     return
 
 
@@ -442,11 +498,6 @@ def main():
                         action='store_true',
                         )    
     
-    parser.add_argument('--keep_temp_files',    
-                        help="Keep temporary files that are generated during re-alignment step (default: False)", 
-                        action='store_true',
-                        )    
-    
     parser.add_argument('-PATH', '--PATH_out',  
                         help='PATH of the output files (default: current directory)', 
                         required=False, 
@@ -463,7 +514,6 @@ def main():
     num_threads     = args["threads"]
     flanking_length = args["flanking"]
     sc              = args["sc"]
-    keepFiles       = args["keep_temp_files"]
     PATH_out        = args["PATH_out"]
     
     bam_filename = os.path.splitext(os.path.basename(dir_bam))[0]
@@ -476,7 +526,7 @@ def main():
     for k, v in args.items():
         logging.info(f'{k}\t:\t{v}')
         
-    runGetAlleleTable(dir_bam, dir_ssr_tsv, dir_ref_genome, mapq_threshold, num_threads, flanking_length, sc, keepFiles, start_time, dir_log, PATH_out)
+    runGetAlleleTable(dir_bam, dir_ssr_tsv, dir_ref_genome, mapq_threshold, num_threads, flanking_length, sc, start_time, dir_log, PATH_out)
     logging.info(f"Finished getAlleleTable.py\t(Total time taken: {nanomnt_utility.getElapsedTime(start_time)} seconds)")
 
         

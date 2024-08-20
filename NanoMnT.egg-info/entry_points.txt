@@ -1,0 +1,5 @@
+[console_scripts]
+filterBAMbyMAPQ = NanoMnT.filterBAMbyMAPQ:main
+findInformativeLoci = NanoMnT.findInformativeLoci:main
+getAlleleTable = NanoMnT.getAlleleTable:main
+getLocusTable = NanoMnT.getLocusTable:main

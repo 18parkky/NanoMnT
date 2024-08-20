@@ -1,0 +1,21 @@
+Metadata-Version: 2.1
+Name: NanoMnT
+Version: 0.1.0
+Summary: A collection of Python scripts for analyzing STR from ONT data
+Home-page: https://github.com/18parkky/NanoMnT
+Author: Gyumin Park
+Author-email: 18parkky@gm.gist.ac.kr
+License: BSD 2-clause
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: BSD License
+Classifier: Operating System :: POSIX :: Linux
+Classifier: Programming Language :: Python :: 3.9.7
+License-File: LICENSE
+Requires-Dist: pysam>=0.20.0
+Requires-Dist: Levenshtein>=0.21.1
+Requires-Dist: numpy>=1.20.3
+Requires-Dist: pandas>=2.0.0
+Requires-Dist: scipy>=1.7.1
+Requires-Dist: matplotlib>=3.7.1
+Requires-Dist: seaborn>=0.13.0
