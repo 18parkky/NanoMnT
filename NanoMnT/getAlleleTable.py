@@ -155,8 +155,7 @@ def realign( bamfile, region, dir_reference_genome, flanking_length, mapq_thresh
                         try:
                             UMI = pileupread.alignment.get_tag("UB")
                         except: 
-                            UMI = None 
-                        
+                            UMI = None      
                             
                     else:
                         CB  = None 
@@ -348,6 +347,7 @@ def runGetAlleleTable( dir_bam, dir_ssr_tsv, dir_reference_genome, mapq_threshol
     required_columns = ["sequence", "start", "end", "motif", "type", "repeat", "length"]
     # STR_table = load_SSR_table( dir_ssr_tsv, required_columns, dir_log )
     STR_table = pd.read_csv(dir_ssr_tsv, sep='\t')
+    STR_table = STR_table.sample(frac=1) # shuffle STR_table
         
     try:
         chunk_size = math.ceil( len(STR_table) / threads )
