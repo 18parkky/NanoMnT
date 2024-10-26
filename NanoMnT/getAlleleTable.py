@@ -235,13 +235,13 @@ def errorCorrection_multiprocess( STR_allele_table_chunk, distance, process_num,
 
     return 
 
-def extractSTR_multiprocess( dir_bamfile, STR_table, dir_reference_genome, flanking_length, mapq_threshold, sc, PATH_temp ):
+def extractSTR_multiprocess( dir_bamfile, STR_table, dir_reference_genome, flanking_length, realignment_f, mapq_threshold, sc, PATH_temp ):
     
     for tup in STR_table.itertuples():
         
         # (1) Realign reads using minimap2 via subprocess
         STR_region = [ str(tup.sequence), tup.motif, tup.repeat, tup.start, tup.end ]
-        fasta_flanking_length = 20000
+        fasta_flanking_length = realignment_f
         bamfile = pysam.AlignmentFile(dir_bamfile, "rb")
         placeholder_length = 50
         realign(bamfile, STR_region, dir_reference_genome, flanking_length, mapq_threshold, fasta_flanking_length, placeholder_length, sc, PATH_temp )
@@ -333,7 +333,7 @@ def extractSTR_multiprocess( dir_bamfile, STR_table, dir_reference_genome, flank
 
     return  
 
-def runGetAlleleTable( dir_bam, dir_ssr_tsv, dir_reference_genome, mapq_threshold, threads, flanking_length, sc, start_time, dir_log, PATH_out ):
+def runGetAlleleTable( dir_bam, dir_ssr_tsv, dir_reference_genome, mapq_threshold, threads, flanking_length, realignment_f, sc, start_time, dir_log, PATH_out ):
     logging.basicConfig(filename=dir_log, level=logging.INFO)
     
     bam_filename = os.path.splitext(os.path.basename(dir_bam))[0]
@@ -367,7 +367,7 @@ def runGetAlleleTable( dir_bam, dir_ssr_tsv, dir_reference_genome, mapq_threshol
         nanomnt_utility.checkAndCreate(PATH_temp)
         
         p = multiprocessing.Process(target=extractSTR_multiprocess,
-                                    args=[dir_bam, STR_chunk, dir_reference_genome, flanking_length, mapq_threshold, sc, PATH_temp] )
+                                    args=[dir_bam, STR_chunk, dir_reference_genome, flanking_length, realignment_f, mapq_threshold, sc, PATH_temp] )
         p.start()
         processes.append(p)
     for process in processes:
@@ -480,10 +480,17 @@ def main():
                         )
     
     parser.add_argument('-f', '--flanking',     
-                        help="Length of flanking sequences to collect (default: 12)", 
+                        help="Length of flanking sequences to collect for each read (default: 12)", 
                         required=False, 
                         type=int,
                         default=12,
+                        )
+    
+    parser.add_argument('-rf', '--realignment_flanking',     
+                        help="Length of flanking sequences of STR to use as reference, during re-alignment process (default: 20000)", 
+                        required=False, 
+                        type=int,
+                        default=20000,
                         )
     
     parser.add_argument('-t', '--threads',      
@@ -513,6 +520,7 @@ def main():
     mapq_threshold  = args["mapping_quality"]
     num_threads     = args["threads"]
     flanking_length = args["flanking"]
+    realignment_f   = args["realignment_flanking"]
     sc              = args["sc"]
     PATH_out        = args["PATH_out"]
     
@@ -526,7 +534,7 @@ def main():
     for k, v in args.items():
         logging.info(f'{k}\t:\t{v}')
         
-    runGetAlleleTable(dir_bam, dir_ssr_tsv, dir_ref_genome, mapq_threshold, num_threads, flanking_length, sc, start_time, dir_log, PATH_out)
+    runGetAlleleTable(dir_bam, dir_ssr_tsv, dir_ref_genome, mapq_threshold, num_threads, flanking_length, realignment_f, sc, start_time, dir_log, PATH_out)
     logging.info(f"Finished getAlleleTable.py\t(Total time taken: {nanomnt_utility.getElapsedTime(start_time)} seconds)")
 
         
