@@ -17,17 +17,17 @@ import matplotlib.pyplot as plt
 
 import NanoMnT.nanomnt_utility as nanomnt_utility
 
-def runFindInformativeLoci( dir_normal_at, dir_normal_lt, 
-                           dir_tumor_at, dir_tumor_lt, 
+def runFindInformativeLoci( PATH_normal_at, PATH_normal_lt, 
+                           PATH_tumor_at, PATH_tumor_lt, 
                            min_coverage, num_plots, 
-                           start_time, dir_log, output_filename, PATH_out ):
+                           start_time, PATH_log, output_filename, DIR_out ):
     
-    logging.basicConfig(filename=dir_log, level=logging.INFO)
+    logging.basicConfig(filename=PATH_log, level=logging.INFO)
 
-    df_normal_at    = pd.read_csv(dir_normal_at, sep='\t')
-    df_normal_lt    = pd.read_csv(dir_normal_lt, sep='\t')
-    df_tumor_at     = pd.read_csv(dir_tumor_at, sep='\t')
-    df_tumor_lt     = pd.read_csv(dir_tumor_lt, sep='\t')
+    df_normal_at    = pd.read_csv(PATH_normal_at, sep='\t')
+    df_normal_lt    = pd.read_csv(PATH_normal_lt, sep='\t')
+    df_tumor_at     = pd.read_csv(PATH_tumor_at, sep='\t')
+    df_tumor_lt     = pd.read_csv(PATH_tumor_lt, sep='\t')
     
     # (1) Filter out loci with insufficient coverage
 
@@ -108,8 +108,8 @@ def runFindInformativeLoci( dir_normal_at, dir_normal_lt,
     # (5) Generate STR allele size histogram plots
     if num_plots > 0:
         logging.info(f"Creating STR allele size histogram plots for top informative {num_plots} loci")
-        PATH_histogram_out = f"{PATH_out}/{output_filename}_histograms"
-        nanomnt_utility.checkAndCreate( PATH_histogram_out )
+        DIR_histogram_out = f"{DIR_out}/{output_filename}_histograms"
+        nanomnt_utility.checkAndCreate( DIR_histogram_out )
 
         plot_count = 0
         for tup in df_informativeLoci_info.dropna().itertuples():
@@ -125,7 +125,7 @@ def runFindInformativeLoci( dir_normal_at, dir_normal_lt,
             f.set_ylabel("Percentage (%)")
 
             fig = f.get_figure()
-            fig.savefig( f"{PATH_histogram_out}/{plot_count+1}_{tup.locus}.png" )
+            fig.savefig( f"{DIR_histogram_out}/{plot_count+1}_{tup.locus}.png" )
             plt.clf()
 
             plot_count += 1
@@ -133,7 +133,7 @@ def runFindInformativeLoci( dir_normal_at, dir_normal_lt,
                 break 
         
     # (6) Write to disk and finish
-    df_informativeLoci_info.to_csv(f"{PATH_out}/{output_filename}.informativeLoci.tsv", sep='\t', index=False)
+    df_informativeLoci_info.to_csv(f"{DIR_out}/{output_filename}.informativeLoci.tsv", sep='\t', index=False)
     return 
 
 def main():
@@ -144,29 +144,29 @@ def main():
     parser = argparse.ArgumentParser(description=script_description)
 
     # Required parameters
-    parser.add_argument('-nat', '--dir_normal_at',      
-                        help="Directory of paired normal allele table", 
+    parser.add_argument('-nat', '--PATH_normal_at',      
+                        help="PATH to paired normal allele table", 
                         required=True,
                         )
     
-    parser.add_argument('-nlt', '--dir_normal_lt',      
-                        help="Directory of paired normal locus table", 
+    parser.add_argument('-nlt', '--PATH_normal_lt',      
+                        help="PATH to paired normal locus table", 
                         required=True,
                         )
     
-    parser.add_argument('-tat', '--dir_tumor_at',      
-                        help="Directory of tumor allele table", 
+    parser.add_argument('-tat', '--PATH_tumor_at',      
+                        help="PATH to tumor allele table", 
                         required=True,
                         )
     
-    parser.add_argument('-tlt', '--dir_tumor_lt',      
-                        help="Directory of tumor locus table", 
+    parser.add_argument('-tlt', '--PATH_tumor_lt',      
+                        help="PATH to tumor locus table", 
                         required=True,
                         )
     
     # Optional parameters
     parser.add_argument('-cov', '--min_coverage',       
-                        help="Minimum coverage required for analyzing STR locus (default: 20)", 
+                        help="Minimum coverage required for analyzing STR locus. Loci with coverage lower than this value will not be processed (default: 20)", 
                         required=False, 
                         type=int, 
                         default=20
@@ -179,8 +179,8 @@ def main():
                         default=10
                         )
     
-    parser.add_argument('-PATH', '--PATH_out',          
-                        help='PATH of the output files (default: current directory)', 
+    parser.add_argument('-out', '--DIR_out',          
+                        help='Directory to write output files (default: current directory)', 
                         required=False, 
                         type=str, 
                         default=os.getcwd() 
@@ -188,30 +188,30 @@ def main():
     
     args = vars(parser.parse_args())
 
-    dir_normal_at   = args["dir_normal_at"]
-    dir_normal_lt   = args["dir_normal_lt"]
-    dir_tumor_at    = args["dir_tumor_at"]
-    dir_tumor_lt    = args["dir_tumor_lt"]
+    PATH_normal_at   = args["PATH_normal_at"]
+    PATH_normal_lt   = args["PATH_normal_lt"]
+    PATH_tumor_at    = args["PATH_tumor_at"]
+    PATH_tumor_lt    = args["PATH_tumor_lt"]
     min_coverage    = args["min_coverage"]
     num_plots       = args["num_plots"]
-    PATH_out        = args["PATH_out"]
+    DIR_out         = args["DIR_out"]
     
-    normal_filename = os.path.splitext( os.path.basename( dir_normal_at ))[0]
-    tumor_filename  = os.path.splitext( os.path.basename( dir_tumor_at ))[0]
+    normal_filename = os.path.splitext( os.path.basename( PATH_normal_at ))[0]
+    tumor_filename  = os.path.splitext( os.path.basename( PATH_tumor_at ))[0]
     output_filename = f"{normal_filename}_{tumor_filename}"
 
-    nanomnt_utility.checkAndCreate( PATH_out )
+    nanomnt_utility.checkAndCreate( DIR_out )
     
-    dir_log = f"{PATH_out}/nanomnt.findInformativeLoci.{output_filename}.log"
-    logging.basicConfig(filename=dir_log, level=logging.INFO)
+    PATH_log = f"{DIR_out}/nanomnt.findInformativeLoci.{output_filename}.log"
+    logging.basicConfig(filename=PATH_log, level=logging.INFO)
     logging.info(f"Listing parameters:")
     for k, v in args.items():
         logging.info(f'{k}\t:\t{v}')
 
-    runFindInformativeLoci( dir_normal_at, dir_normal_lt, 
-                           dir_tumor_at, dir_tumor_lt, 
+    runFindInformativeLoci( PATH_normal_at, PATH_normal_lt, 
+                           PATH_tumor_at, PATH_tumor_lt, 
                            min_coverage, num_plots, 
-                           start_time, dir_log, output_filename, PATH_out )
+                           start_time, PATH_log, output_filename, DIR_out )
 
     logging.info(f"Finished findInformativeLoci.py\t(Total time taken: {nanomnt_utility.getElapsedTime(start_time)} seconds)")
 

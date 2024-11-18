@@ -17,7 +17,7 @@ setup(
     },
     install_requires=['pysam>=0.20.0',
                       'Levenshtein>=0.21.1',     
-                      'numpy>=1.20.3',
+                      'numpy==1.26.4',
                       'pandas>=2.0.0',
                       'scipy>=1.7.1',
                       'matplotlib>=3.7.1',

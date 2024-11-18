@@ -75,10 +75,10 @@ def findBestPeak( find_peaks_out, ref_length, filling_range ):
         return k + c, v
     
 def process_STR_locus(STR_allele_table, batch_id, read_selection, 
-                    min_coverage, filename, dir_log, get_allele_size_info,
-                    PATH_multiprocess_out, PATH_alleleSizeDist_out):
+                    min_coverage, filename, PATH_log, get_allele_size_info,
+                    DIR_multiprocess_out, DIR_alleleSizeDist_out):
     
-    logging.basicConfig(filename=dir_log, level=logging.INFO)
+    logging.basicConfig(filename=PATH_log, level=logging.INFO)
         
     # Iterate through each STR locus and generate locus table
     list_of_lociInfos = [ ]
@@ -156,7 +156,7 @@ def process_STR_locus(STR_allele_table, batch_id, read_selection,
 
         if get_allele_size_info == True:
 
-            PATH_alleleSizeDist_subdirectory = f"{PATH_alleleSizeDist_out}/{repeat_unit}/{chromosome}"
+            DIR_alleleSizeDist_subdirectory = f"{DIR_alleleSizeDist_out}/{repeat_unit}/{chromosome}"
 
             # (File 1) Allele size distribution histogram
             coverage = len( df_at_of_choice[(df_at_of_choice["corrected_allele"] != "uncor")] )
@@ -173,11 +173,11 @@ def process_STR_locus(STR_allele_table, batch_id, read_selection,
             f.set_ylabel("Percentage (%)")
 
             fig = f.get_figure()
-            fig.savefig( f"{PATH_alleleSizeDist_subdirectory}/{repeat_unit}x{reference_STR_allele}_{locus}.png" )
+            fig.savefig( f"{DIR_alleleSizeDist_subdirectory}/{repeat_unit}x{reference_STR_allele}_{locus}.png" )
             plt.clf()
 
                 # (File 2) Allele length distribution text file
-            with open(f"{PATH_alleleSizeDist_subdirectory}/{repeat_unit}x{reference_STR_allele}_{locus}.txt", "w") as log:
+            with open(f"{DIR_alleleSizeDist_subdirectory}/{repeat_unit}x{reference_STR_allele}_{locus}.txt", "w") as log:
                 log.write( f"allele\tfrequency\n" )
                 for allele, freq in observed_allele_histogram.items():
                     log.write(f"{allele}\t{freq}\n")
@@ -209,7 +209,7 @@ def process_STR_locus(STR_allele_table, batch_id, read_selection,
                                   columns = [ 'chromosome', 'start', 'end', 'locus', 'repeat_unit', 'reference_STR_allele', 'percentage_of_reference_allele', 'correction_rate', 
                                              'corrected_read_count', "allele", "peak_pos", "peak_prominence", "num_peaks", "int_relative_allele_size", "histogram_area_relative_to_reference"] )
     
-    STR_locus_table.to_csv(f"{PATH_multiprocess_out}/{filename}.getLocusTable.temp_{batch_id+1}.tsv", sep='\t', index=False)
+    STR_locus_table.to_csv(f"{DIR_multiprocess_out}/{filename}.getLocusTable.temp_{batch_id+1}.tsv", sep='\t', index=False)
     return
 
 def chunk_STR_allele_table(STR_allele_table, num_loci, threads):
@@ -236,30 +236,30 @@ def chunk_STR_allele_table(STR_allele_table, num_loci, threads):
 
 def runGetLocusTable( STR_allele_table, filename, threads,
         get_allele_size_info, read_selection, 
-        min_coverage, start_time, dir_log, PATH_out ):
+        min_coverage, start_time, PATH_log, DIR_out ):
     
-    logging.basicConfig(filename=dir_log, level=logging.INFO)
+    logging.basicConfig(filename=PATH_log, level=logging.INFO)
     
     # (1) Create a new folder for (a) multiprocessing and (b) saving STR loci allele size distribution files
-    PATH_multiprocess_out = f"{PATH_out}/{filename}.multiprocessing_temp"
-    nanomnt_utility.checkAndCreate( PATH_multiprocess_out )    
+    DIR_multiprocess_out = f"{DIR_out}/{filename}.multiprocessing_temp"
+    nanomnt_utility.checkAndCreate( DIR_multiprocess_out )    
 
     if get_allele_size_info == True:
-        PATH_alleleSizeDist_out = f"{PATH_out}/{filename}.allele_size_distribution"
-        logging.info(f"Creating PATH(s) for saving allele size distribution files: {PATH_alleleSizeDist_out}/*")
-        logging.info(f"Do NOT delete or create new folder in this PATH!")
-        nanomnt_utility.checkAndCreate( PATH_alleleSizeDist_out )
+        DIR_alleleSizeDist_out = f"{DIR_out}/{filename}.allele_size_distribution"
+        logging.info(f"Creating directories(s) for saving allele size distribution files: {DIR_alleleSizeDist_out}/*")
+        logging.info(f"Do NOT delete or create new folder in this directory!")
+        nanomnt_utility.checkAndCreate( DIR_alleleSizeDist_out )
         
-        # Create subdirectory for allele length dist info files: e.g., PATH_out/repeat_unit/chromosome/
+        # Create subdirectory for allele length dist info files: e.g., DIR_out/repeat_unit/chromosome/
         STR_allele_table["chromosome"] = [ locus.split(":")[0] for locus in STR_allele_table.locus ]
         for repeat_unit, edf in STR_allele_table.groupby("repeat_unit"):
             for chromosome, edf2 in edf.groupby("chromosome"):
-                PATH_alleleSizeDist_subdirectory_A = f"{PATH_alleleSizeDist_out}/{repeat_unit}"
-                PATH_alleleSizeDist_subdirectory_B = f"{PATH_alleleSizeDist_out}/{repeat_unit}/{chromosome}"
-                nanomnt_utility.checkAndCreate(PATH_alleleSizeDist_subdirectory_A)
-                nanomnt_utility.checkAndCreate(PATH_alleleSizeDist_subdirectory_B)
+                DIR_alleleSizeDist_subdirectory_A = f"{DIR_alleleSizeDist_out}/{repeat_unit}"
+                DIR_alleleSizeDist_subdirectory_B = f"{DIR_alleleSizeDist_out}/{repeat_unit}/{chromosome}"
+                nanomnt_utility.checkAndCreate(DIR_alleleSizeDist_subdirectory_A)
+                nanomnt_utility.checkAndCreate(DIR_alleleSizeDist_subdirectory_B)
     else:
-        PATH_alleleSizeDist_out = None
+        DIR_alleleSizeDist_out = None
 
     # (2) Chunk STR allele table
     num_loci    = len(set(STR_allele_table.locus))
@@ -271,8 +271,8 @@ def runGetLocusTable( STR_allele_table, filename, threads,
     logging.info(f"Starting multiprocessing with {threads}\t(elapsed time: {nanomnt_utility.getElapsedTime(start_time)} seconds)")
     for idx, STR_allele_table_chunk in enumerate(list_STR_allele_table_chunks):
         p = multiprocessing.Process(target=process_STR_locus, 
-                                    args=[STR_allele_table_chunk, idx, read_selection, min_coverage, filename, dir_log, 
-                                          get_allele_size_info, PATH_multiprocess_out, PATH_alleleSizeDist_out] )
+                                    args=[STR_allele_table_chunk, idx, read_selection, min_coverage, filename, PATH_log, 
+                                          get_allele_size_info, DIR_multiprocess_out, DIR_alleleSizeDist_out] )
         p.start()
         processes.append(p)
     for process in processes:
@@ -283,12 +283,12 @@ def runGetLocusTable( STR_allele_table, filename, threads,
 
     # (4) Merge temporary STR locus table from multiprocessing to create final STR locus table 
     logging.info(f"Finished multiprocessing. Merging temporary files.\t(elapsed time: {nanomnt_utility.getElapsedTime(start_time)} seconds)")
-    list_dir_tsvs   = glob.glob(f"{PATH_multiprocess_out}/{filename}.getLocusTable.temp_*.tsv")
+    list_PATH_tsvs   = glob.glob(f"{DIR_multiprocess_out}/{filename}.getLocusTable.temp_*.tsv")
     STR_locus_table  = list()
-    for dir_tsv in list_dir_tsvs:
-        STR_locus_table.append( pd.read_csv( dir_tsv, sep='\t' ) )
-        os.remove(dir_tsv)
-    os.rmdir(PATH_multiprocess_out)
+    for PATH_tsv in list_PATH_tsvs:
+        STR_locus_table.append( pd.read_csv( PATH_tsv, sep='\t' ) )
+        os.remove(PATH_tsv)
+    os.rmdir(DIR_multiprocess_out)
     
     STR_locus_table = pd.concat( STR_locus_table )
     STR_locus_table["read_selection"] = read_selection
@@ -301,22 +301,22 @@ def runGetLocusTable( STR_allele_table, filename, threads,
     #     f.set_xlabel("Peak promience")
     #     f.set_ylabel("Relative density")
     #     fig = f.get_figure()
-    #     fig.savefig( f"{PATH_out}/{repeat_unit}_repeat_prominence_KDE.png" )
+    #     fig.savefig( f"{DIR_out}/{repeat_unit}_repeat_prominence_KDE.png" )
     #     plt.clf()
 
     logging.info(f"Writing STR locus table to disk")
-    STR_locus_table.to_csv(f"{PATH_out}/{filename}.STR_locus_table.tsv", sep='\t', index=False)
+    STR_locus_table.to_csv(f"{DIR_out}/{filename}.STR_locus_table.tsv", sep='\t', index=False)
     
     # (5) Erase any empty subdirectories
-    if PATH_alleleSizeDist_out != None:
-        logging.info(f"Deleting empty directories in: {PATH_alleleSizeDist_out}/*")
+    if DIR_alleleSizeDist_out != None:
+        logging.info(f"Deleting empty directories in: {DIR_alleleSizeDist_out}/*")
         if get_allele_size_info == True:
             try:
-                empty_directories = nanomnt_utility.find_empty_directories( PATH_alleleSizeDist_out )
+                empty_directories = nanomnt_utility.find_empty_directories( DIR_alleleSizeDist_out )
                 for directory in empty_directories:
                     os.rmdir( directory )
             except FileNotFoundError:
-                logging.warn( f"Could not delete empty directories in: {PATH_alleleSizeDist_out}/*. This is usually not a problem" )
+                logging.warn( f"Could not delete empty directories in: {DIR_alleleSizeDist_out}/*. This is usually not a problem" )
         
     return 
 
@@ -331,8 +331,8 @@ def main():
     PATH_script     = os.path.dirname(os.path.dirname(__file__))
 
     # Required parameters
-    parser.add_argument('-at', '--dir_STR_allele_table',  
-                        help="Directory of STR allele table",
+    parser.add_argument('-at', '--PATH_STR_allele_table',  
+                        help="PATH to STR allele table",
                         required=True
                         )
     parser.add_argument('-read_selection',
@@ -345,7 +345,7 @@ def main():
                         action='store_true'
                         )    
     parser.add_argument('-cov', '--min_coverage',       
-                        help="Minimum coverage required for analyzing STR locus (default: 20)", 
+                        help="Minimum coverage required for analyzing STR locus. Loci with coverage lower than this value will not be processed (default: 20)", 
                         required=False, type=int, default=20)
     parser.add_argument('-t', '--threads',              
                         help="Number of threads (default: 4)", 
@@ -353,8 +353,8 @@ def main():
                         type=int, 
                         default=4
                         )
-    parser.add_argument('-PATH', '--PATH_out',          
-                        help='PATH of the output files (default: current directory)', 
+    parser.add_argument('-out', '--DIR_out',          
+                        help='Directory to write the output files (default: current directory)', 
                         required=False, 
                         type=str, 
                         default=os.getcwd() 
@@ -362,18 +362,18 @@ def main():
 
     args = vars(parser.parse_args())
     
-    dir_STR_allele_table        = args["dir_STR_allele_table"]
+    PATH_STR_allele_table       = args["PATH_STR_allele_table"]
     read_selection              = args["read_selection"]
     get_allele_size_info        = args["get_allele_size_info"]
     min_coverage        = args["min_coverage"]
     threads             = args["threads"]
-    PATH_out            = args["PATH_out"]
+    DIR_out            = args["DIR_out"]
     
-    filename    = os.path.splitext( os.path.basename( dir_STR_allele_table ))[0]
-    nanomnt_utility.checkAndCreate( PATH_out )
+    filename    = os.path.splitext( os.path.basename( PATH_STR_allele_table ))[0]
+    nanomnt_utility.checkAndCreate( DIR_out )
     
-    dir_log = f"{PATH_out}/nanomnt.getLocusTable.{filename}.log"
-    logging.basicConfig(filename=dir_log, level=logging.INFO)
+    PATH_log = f"{DIR_out}/nanomnt.getLocusTable.{filename}.log"
+    logging.basicConfig(filename=PATH_log, level=logging.INFO)
     logging.info(f"Listing parameters:")
     for k, v in args.items():
         logging.info(f'{k}\t:\t{v}')
@@ -382,11 +382,11 @@ def main():
         logging.error(f"Invalid read_selection input: {read_selection} must be either (1) fw_rv_reads, (2) all_reads")
         raise ValueError
 
-    STR_allele_table = pd.read_csv( dir_STR_allele_table, sep='\t' )
+    STR_allele_table = pd.read_csv( PATH_STR_allele_table, sep='\t' )
 
     runGetLocusTable( STR_allele_table, filename, threads,
         get_allele_size_info, read_selection, 
-        min_coverage, start_time, dir_log, PATH_out )
+        min_coverage, start_time, PATH_log, DIR_out )
     
     logging.info(f"Finished getLocusTable.py\t(Total time taken: {nanomnt_utility.getElapsedTime(start_time)} seconds)")
 

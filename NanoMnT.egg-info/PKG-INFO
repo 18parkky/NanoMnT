@@ -14,7 +14,7 @@ Classifier: Programming Language :: Python :: 3.9.7
 License-File: LICENSE
 Requires-Dist: pysam>=0.20.0
 Requires-Dist: Levenshtein>=0.21.1
-Requires-Dist: numpy>=1.20.3
+Requires-Dist: numpy==1.26.4
 Requires-Dist: pandas>=2.0.0
 Requires-Dist: scipy>=1.7.1
 Requires-Dist: matplotlib>=3.7.1
