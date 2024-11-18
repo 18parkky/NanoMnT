@@ -171,6 +171,11 @@ Among these, the most important information is the locus score. High locus score
 
 ### filterBAMbyMAPQ → Filtered BAM  
 filterBAMbyMAPQ generates a filtered, sorted BAM file along with the BAM index file.  
+
+## Tutorial - Identifying MSI status of cancer cell lines using SG-NEx dataset
+Although ONT sequencing suffers heavily in STR regions, it can still be used to detect MSI status in cancer sequencing data, nonetheless.
+We provide a tutorial (~/tutorial/tutorial.ipynb) for detecting MSI status by inspecting STR allele size profile of cancer ONT data.  
+
   
 ## Citation  
 If you use NanoMnT in your research, please cite this paper.  
