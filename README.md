@@ -1,11 +1,11 @@
 [![DOI](https://zenodo.org/badge/829822589.svg)](https://zenodo.org/doi/10.5281/zenodo.13347495)
 
-<br/>Table of contents<br/>
-<br/>[1. Installation](#installation)<br/>
-<br/>[2. Commands & Parameters](#commands--parameters)<br/>
-<br/>[3. Output files](#output-files)<br/>
-<br/>[4. Tutorial - Identifying MSI status of cancer cell lines using SG-NEx dataset](#tutorial---identifying-msi-status-of-cancer-cell-lines-using-sg-nex-dataset)<br/>
-<br/>[5. Citation](#citation)<br/>
+# Table of contents
+[1. Installation](#installation)
+<br/>[2. Commands & Parameters](#commands--parameters)
+<br/>[3. Output files](#output-files)
+<br/>[4. Tutorial - Identifying MSI status of cancer cell lines using SG-NEx dataset](#tutorial---identifying-msi-status-of-cancer-cell-lines-using-sg-nex-dataset)
+<br/>[5. Citation](#citation)
 
 # NanoMnT
 A collection of Python scripts for (1) correcting sequencing errors within STR regions from Oxford Nanopore (ONT) sequencing data and (2) genotyping monoallelic STR regions. 
