@@ -3,8 +3,9 @@
 # NanoMnT
 A collection of Python scripts for (1) correcting sequencing errors within STR regions from Oxford Nanopore (ONT) sequencing data and (2) genotyping monoallelic STR regions. 
 
-## Dependencies
-NanoMnT relies on the following packages:
+## Installation
+
+Before installing, ensure that the following packages are installed:
   
   - Matplotlib >= 3.7.1
   - Numpy >= 1.20.3
@@ -13,41 +14,47 @@ NanoMnT relies on the following packages:
   - Scipy >= 1.7.1
   - Seaborn >= 0.13.0
 
-Furthermore, NanoMnT requires [Krait](https://github.com/lmdu/krait) output files as inputs, which needs to be installed separately.  
-Krait output files for the human genome (T2T-CHM13v2.0) is included in NanoMnT:```NanoMnT/ref/krait.t2tchm13.tsv```.
+After installing these packages, use the following commands to install NanoMnT. 
+*Feel free to create a new conda environment for NanoMnT.
+```
+git clone https://github.com/18parkky/NanoMnT.git
+cd NanoMnT
+pip install .
+```
 
+NanoMnT requires [Krait](https://github.com/lmdu/krait) output files as inputs, which needs to be installed separately.  
+Krait output files for the human genome (T2T-CHM13v2.0) is included in NanoMnT:```NanoMnT/ref/krait.t2tchm13.tsv```.
 NanoMnT has been tested in Python version 3.9.7. and should work in later versions.
 
-## Description of commands and parameters
+## Commands & Parameters
 
 NanoMnT has three main commands: **getAlleleTable**, **getLocusTable**, and **findInformativeLoci** as well as several utility commands.
 
 ### getAlleleTable
 The ```getAlleleTable``` command requires an input BAM and Krait file (to specify STR loci of interest) as inputs, and produces a single TSV file, namely, the allele table. The allele table contains information about every reads that aligned to any of the given STR locus.
 ```
-usage: getAlleleTable.py [-h] -b DIR_BAM [-s DIR_SSR_TSV] [-e ERROR_THRESHOLD] [-m MAPPING_QUALITY] [-bq AVERAGE_BQ] [-f FLANKING]
-                         [-t THREADS] [--sc] [-PATH PATH_OUT]
+usage: getAlleleTable.py [-h] -b PATH_BAM -s PATH_STR_TSV -r PATH_REF_GENOME [-m MAPPING_QUALITY] [-f FLANKING] [-rf REALIGNMENT_FLANKING] [-t THREADS] [--sc] [-out DIR_OUT]
 ```
 **Required parameters**:
-- **-b**: directory of input BAM
-- **-s**: directory of Krait output  
-
+- **-b**: PATH to input BAM
+- **-s**: PATH to Krait output  
+- **-r**: PATH to reference genome
+   
 **Optional parameters**:
-- -m: minimum MAPQ when processing reads. Reads with MAPQ below this will be discarded (default: 60)
-- -bq: minimum average BQ when processing reads. Reads with *average* BQ below this will be discarded (default: 0)
-- -f: length of flanking sequences to be written on allele table (default: 12)
-- -t: number of threads to use for multiprocessing (default: 4)
-- --sc: option that tells NanoMnT to look for CB and UMI for each read (default: False)
-- -PATH: path to write output file to (default: current directory)
+- -m: Minimum MAPQ when processing reads. Reads with MAPQ below this will be discarded (default: 60)
+- -f: Length of flanking sequences to be written on allele table (default: 12)
+- -rf: Length of flanking sequences of STR to use as reference, during re-alignment process (default: 20000)
+- -t: Number of threads to use for multiprocessing (default: 4)
+- --sc: Option that tells NanoMnT to look for CB and UMI for each read (default: False)
+- -out: Directory to write output files (default: current directory)
 
 ### getLocusTable
 getLocusTable takes the generated allele table as input and summarizes information for each detected STR locus, generating a single TSV file called the locus table.  
 ```
-usage: getLocusTable.py [-h] -at DIR_STR_ALLELE_TABLE -read_selection READ_SELECTION [--get_allele_size_dist_info] [-ref DIR_REF_GENOME]
-                        [-cov MIN_COVERAGE] [-t THREADS] [-PATH PATH_OUT]
+usage: getLocusTable.py [-h] -at PATH_STR_ALLELE_TABLE -read_selection READ_SELECTION [--get_allele_size_info] [-cov MIN_COVERAGE] [-t THREADS] [-out DIR_OUT]
 ```
 **Required parameters**:
-- **-at**: directory of allele table
+- **-at**: PATH to allele table
 - **-read_selection**: method to use when selecting which set of reads to use when estimating STR allele size:
     - <ins>all_reads</ins>: use all reads
     - <ins>fw_rv_reads</ins>: use forward reads or reverse reads, depending on the repeat unit of the STR. Currently, this applies only to A-/T-/AC-/TG-repeats. All STR with other repeat units will be subjected to use all reads.
@@ -70,29 +77,41 @@ usage: getLocusTable.py [-h] -at DIR_STR_ALLELE_TABLE -read_selection READ_SELEC
     | 13 | 0.15   |
   
 - -ref: directory of the reference genome. This parameter is required when specifying ML mode as read_selection parameter (default: None)
-- -cov: minimum required coverage when processing a given STR locus (default: 20)
+- -cov: minimum required coverage when processing a given STR locus. Loci with coverage lower than this value will not be processed (default: 20)
 - -t: number of threads to use for multiprocessing (default: 4)
-- -PATH: path to write output file to (default: current directory)
+- -out: Directory to write output file to (default: current directory)
 
 ### findInformativeLoci
 getLocusTable takes the generated allele table as input and summarizes information for each detected STR locus, generating a single TSV file called the locus table.  
 findInformativeLoci takes allele table and locus table of both tumor and paired normal sample as inputs, and searches for informative STR loci. i.e., STR loci that differ in tumor allele and normal allele. High number of informative STR loci may indicate MSI-H phenotype.
 ```
-usage: findInformativeLoci.py [-h] -nat DIR_NORMAL_AT -nlt DIR_NORMAL_LT -tat DIR_TUMOR_AT -tlt DIR_TUMOR_LT [-cov MIN_COVERAGE] [-n_plots NUM_PLOTS] [-PATH PATH_OUT]
+usage: findInformativeLoci.py [-h] -nat PATH_NORMAL_AT -nlt PATH_NORMAL_LT -tat PATH_TUMOR_AT -tlt PATH_TUMOR_LT [-cov MIN_COVERAGE] [-n_plots NUM_PLOTS] [-out DIR_OUT]
 ```
+**Required parameters**:
+- **-nat**: PATH to allele table of the normal sample
+- **-nlt**: PATH to locus table of the normal sample
+- **-tat**: PATH to allele table of the tumor sample
+- **-tlt**: PATH to locus table of the tumor sample
+
+**Optional parameters**:
+- -cov: Minimum coverage required when analyzing STR locus. Loci with coverage lower than this value will not be processed (default: 20)
+- -n_plots: Generate allele histogram of top __ informative loci (default: 10)
+- -out: Directory to write output files (default: current directory)
 
 
 ### utility script: filterBAMbyMAPQ
 NanoMnT also has a utility command: **filterBAMbyMAPQ**, which takes a BAM file as input and filters out non-Primary reads with user-specifiable MAPQ threshold. Although not necessary, you can first preprocess your BAM file with this command before running getAlleleTable & getLocusTable.  
 ```
-usage: filterBAMbyMAPQ.py [-h] -b DIR_INPUT_BAM -m MAPPING_QUALITY [-PATH PATH_OUT]
+usage: filterBAMbyMAPQ.py [-h] -b PATH_INPUT_BAM -m MAPPING_QUALITY [-P] [--remove_secondary_reads] [--remove_supplementary_reads] [-out DIR_OUT]
 ```
 **Required parameters**:
-- **-b**: directory of input BAM
-- **-m**: MAPQ threshold to filter reads. Note that the maximum MAPQ output by minimap2 is 60.  
+- **-b**: PATH to input BAM
+- **-m**: MAPQ threshold to filter reads. Note that the maximum MAPQ output by minimap2 is 60
 **Optional parameters**:
-- -PATH: path to write output file to (default: current directory)
-
+- -P: Only output primary reads
+- --remove_secondary_reads: Remove secondary reads
+- --remove_supplementary_reads: Remove supplementary reads
+- -out: Directory to write output file to (default: current directory)
   
 ## Output files
 
