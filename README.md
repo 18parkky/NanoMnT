@@ -203,7 +203,7 @@ filterBAMbyMAPQ generates a filtered, sorted BAM file along with the BAM index f
 
 ## Tutorial - Identifying MSI status of cancer cell lines using SG-NEx dataset
 Although ONT sequencing suffers heavily in STR regions, it can still be used to detect MSI status in cancer sequencing data, nonetheless.
-We provide a tutorial (~/tutorial/tutorial.ipynb) for detecting MSI status by inspecting STR allele size profile of cancer ONT data.  
+We provide [tutorial notebook(s)](https://github.com/18parkky/NanoMnT/tree/main/tutorial) for detecting MSI status by inspecting STR allele size profile of cancer ONT data.  
 
   
 ## Citation  
