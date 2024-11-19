@@ -150,9 +150,9 @@ def process_STR_locus(STR_allele_table, batch_id, read_selection,
             # (2-4-2) Sub-approach: Find most prominent peak using scipy's find_peak()
         peaks = find_peaks( list(observed_allele_histogram.values()), prominence=1 )
         try:
-            truePeak, prominence = findBestPeak(peaks, reference_STR_allele, nanomnt_utility.allele_histogram_width)
+            majorPeak, prominence = findBestPeak(peaks, reference_STR_allele, nanomnt_utility.allele_histogram_width)
         except TypeError: # No peaks have been found
-            truePeak, prominence = None, None
+            majorPeak, prominence = None, None
 
         if get_allele_size_info == True:
 
@@ -166,7 +166,7 @@ def process_STR_locus(STR_allele_table, batch_id, read_selection,
 
             plt.axvline( x=int(genotyped_allele), color="dodgerblue", linestyle=':', linewidth=2, alpha=0.7 )
             plt.axvline( x=int(reference_STR_allele), color="red", linestyle=':', linewidth=2, alpha=0.7 )
-            # plt.axvline( x=int(truePeak), color="gold", linestyle=':', linewidth=2, alpha=0.8 )
+            # plt.axvline( x=int(majorPeak), color="gold", linestyle=':', linewidth=2, alpha=0.8 )
             
             f.set(title=f"{repeat_unit}x{genotyped_allele}_cov:{coverage}")
             f.set_xlabel("STR allele")
@@ -198,7 +198,7 @@ def process_STR_locus(STR_allele_table, batch_id, read_selection,
             allele_count.sum() / len( df_at_of_choice ), # correction rate
             allele_count.sum( ),                # corrected read count
             genotyped_allele,                   # STR genotype result
-            truePeak,                           # most prominent peak
+            majorPeak,                          # most prominent peak
             prominence,                         # peak prominence
             len(peaks[0]),                      # number of peaks
             int_relative_allele_size,           # relative allele size (allele - reference allele)
