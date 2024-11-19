@@ -1,17 +1,17 @@
 [![DOI](https://zenodo.org/badge/829822589.svg)](https://zenodo.org/doi/10.5281/zenodo.13347495)
 
 # Table of contents
-1. [Installation](#installation)
-<br/>2. [Commands & Parameters](#commands--parameters)
-<br/>3. [Output files](#output-files)
-<br/>4. [Tutorial - Identifying MSI status of cancer cell lines using SG-NEx dataset](#tutorial---identifying-msi-status-of-cancer-cell-lines-using-sg-nex-dataset)
-<br/>5. [Citation](#citation)
+1. [Installation](#installation)<br/>
+2. [Commands & Parameters](#commands--parameters)<br/>
+3. [Output files](#output-files)<br/>
+4. [Tutorial - Identifying MSI status of cancer cell lines using SG-NEx dataset](#tutorial---identifying-msi-status-of-cancer-cell-lines-using-sg-nex-dataset)<br/>
+5. [Citation](#citation)<br/>
 
 # NanoMnT
 A collection of Python scripts for (1) correcting sequencing errors within STR regions from Oxford Nanopore (ONT) sequencing data and (2) genotyping monoallelic STR regions. 
 
-## Installation
 
+## Installation
 Before installing, ensure that the following packages are installed:
   
   - Matplotlib >= 3.7.1
@@ -35,7 +35,6 @@ Krait configuration for minimum repeats for each STR type is as follows: mono-: 
 NanoMnT has been tested in Python version 3.9.7. and should work in later versions.
 
 ## Commands & Parameters
-
 NanoMnT has four main commands: `estimateLociCoverage`, `getAlleleTable`, `getLocusTable`, and `findInformativeLoci` as well as several utility commands.
 
 ### `estimateLociCoverage`
@@ -135,10 +134,14 @@ usage: filterBAMbyMAPQ.py [-h] -b PATH_INPUT_BAM -m MAPPING_QUALITY [-P] [--remo
 - `--remove_supplementary_reads`: Remove supplementary reads
 - `-out`: Directory to write output file to (default: current directory)
 
-
 ## Output files
 
+**We recommend going through the tutorial notebook(s). It will help users understand the outputs & how to interpret them**
 By default, running each command will each generate one file (+one log file).  
+
+### `estimateLociCoverage` → Two Krait files
+`estimateLociCoverage` produces two Krait files: (1) the input Krait file labeld with estimated coverage without any filtering and (2) a smaller Krait file where STR loci with insufficient coverage (<`cov`) are filtered out.
+Uusing the second Krait file for `getAlleleTable` will significantly reduce runtime.
 
 ### `getAlleleTable` → allele table
 As mentioned above, `getAlleleTable` produces the 'allele table', of which each row contains the following information:
@@ -169,26 +172,17 @@ Each row of locus table contains the following information:
 - Percentage of the reads that report the reference allele (`percentage_of_reference_allele`)
 - Percentage of reads that have been corrected (`correction_rate`)
 - Number of reads that have been corrected (`corrected_read_count`)
-- STR allele estimated by NanoMnT (`allele`)
+- <ins>**STR allele estimated by NanoMnT**</ins> (`allele`)
 - Position of the most prominent peak in the allele histogram (to visualize the allele histogram, use `--get_allele_size_info`) (`peak_pos`)
-- Prominence of the peak calculated using `scipy.signal.find_peaks`
-- 
-- Major allele<sup>1</sup>	
-- 
-- STR size of reference
-- Effective number of allele in the the given STR locus<sup>2</sup>	
-- Percentage of reference allele in the given STR locus
-- Correction rate<sup>3</sup>
-- Predicted number of allele in the given STR locus<sup>4</sup>	
-- **Genotyped allele**
-- Peak prominence of the most frequently observed allele<sup>5</sup>
-  
-1) <ins>Major allele</ins> is defined by the most frequently found allele within the allele size histogram of your data.
-2) <ins>Effective number of allele</ins> is not meant to be interpreted directly; rather, it describes the dispersion of the allele size histogram. If the STR locus is believed to be monoallelic, low effective number of allele would be a good indication.
-3) <ins>Correction rate</ins> represents the percentage of reads that have been corrected during `getAlleleTable`.
-4) <ins>Predicted number of allele</ins> is measured by counting the number of prominent peaks in the allele size histogram of the given STR locus.
-5) <ins>Peak prominence</ins> is calculated using SciPy's find_peaks function. Furthermore, the most frequent allele does not necessarily equal the genotyped allele (ONT can generate misleading STR allele size histogram, and the most frequently observed allele is often not the correct allele). Nevertheless, this metric often provides good QC metric, as <ins>high peak prominence most often indicates good STR size estimation</ins>. 
+- Prominence of the peak<sup>1</sup> (`peak_prominence`)
+- Number of peaks detected by `scipy.signal.find_peaks` (`num_peaks`) (unless the sample is MSI, high `num_peaks` indicates poor sequencing accuracy or high ploidy)
+- STR allele relative to the reference genome (`int_relative_allele_size`) (e.g., v>0 indicates that the allele is longer than the reference allele)
+- Area of allele histogram relative to the reference (`histogram_area_relative_to_reference`)<sup>2</sup>
+- Read selection method used (the `-read_selection` parameter) (`read_selection`)
 
+1) <ins>Peak prominence</ins> is calculated using SciPy's find_peaks function. Furthermore, the most frequent allele does not necessarily equal the genotyped allele (ONT can sometimes generate misleading STR allele size histogram, and the most frequently observed allele is often not the correct allele). Nevertheless, this metric often provides good QC metric, as <ins>high peak prominence most often indicates good STR size estimation</ins>.<br/>
+2) This metric is calculated as the sum of `(STR allele - reference allele) × (observed frequency of the allele)` for each observed allele. Very similar to `int_relative_allele_size` in terms of interpretation.
+   
 ### `findInformativeLoci` → informative loci table
 A successful run of `findInformativeLoci` generates a single tab-separated file, referred to as informative loci table.
 Each row of informative loci table contains the following information:
