@@ -207,7 +207,7 @@ We provide [tutorial notebook(s)](https://github.com/18parkky/NanoMnT/tree/main/
 
   
 ## Citation  
-If you use NanoMnT in your research, please cite this paper.  
+If you use NanoMnT in your research, please cite this paper: https://doi.org/10.1093/gigascience/giaf013  
 
-
-NanoMnT is under active development, so feel free to make suggestions! 
+We are currently working on identification of MSI cells in single-cell resolution and making promising progress.
+NanoMnT is under active development, so feel free to make suggestions!
