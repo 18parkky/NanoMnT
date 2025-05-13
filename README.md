@@ -10,6 +10,7 @@
 # NanoMnT
 A collection of Python scripts for (1) correcting sequencing errors within STR regions from Oxford Nanopore (ONT) sequencing data and (2) genotyping monoallelic STR regions. 
 
+If you are looking for scMnT, which is for analyzing microsatellite instability in single-cell resolution from scRNA-seq data, please change the branch from `NanoMnT` to `scMnT`.
 
 ## Installation
 Before installing, ensure that the following packages are installed:
